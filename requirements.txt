@@ -1,0 +1,12 @@
+
+websockets
+requests
+bs4
+discord
+aiohttp
+msgpack
+flask
+httpx
+dotenv
+streamlit
+dotenv
