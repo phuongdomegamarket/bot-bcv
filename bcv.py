@@ -1,30 +1,17 @@
-import asyncio
 import base64
 import json
-import locale
 import os
-import queue
-import random
 import re
-import subprocess
-import sys
-import threading
 import time
 import uuid
 from datetime import datetime, timedelta
-from io import BytesIO
-from webbrowser import get
 
 import aiohttp
-import easyocr
-import numpy as np
-import requests
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.hazmat.primitives.asymmetric.ec import generate_private_key
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from PIL import Image
 
 BASE_URL = "https://digiapp.vietcombank.com.vn/bank-service"
 DEFAULT_PAYLOAD = {
