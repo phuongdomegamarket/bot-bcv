@@ -98,7 +98,6 @@ def myStyle(log_queue):
                 RESULT = await getBasic(guild)
                 stopped = False
                 while not stopped:
-                    USERNAME = "0386757425"
                     result = await bcv.login(username=USERNAME, password=PASSWORD)
                     if result:
                         DEFAULT_PAYLOAD = {
