@@ -517,83 +517,90 @@ async def getAccountList(
 async def getConfigValue(
     default_meta=None, public_key_base64=None, private_key_pem=None
 ):
-    if not public_key_base64 or not private_key_pem:
-        public_key_base64 = DEFAULTS["public_key_base64"]
-        private_key_pem = DEFAULTS["private_key_pem"]
-    if not default_meta:
-        default_meta = DEFAULT_PAYLOAD
-    payload = encrypt_request(
-        {
-            **default_meta,
-            "configCodes": [
-                "EXPIRE_PASS",
-                "EXPIRE_PASS_MES_IB_VN",
-                "EXPIRE_PASS_MES_IB_EN",
-                "CLOSE_CONFIRMATION_ND13_BY_DATE",
-                "CLOSE_CONFIRMATION_ND13_BY_WEEK",
-                "ON_RM",
-                "STATUS_CARD_INSIGHT_BL",
-                "PROD_CARD_INSIGHT",
-                "ACCEPT_HDGDAT",
-                "XPRO_PENSION_POPUP",
-                "XPRO_NO_PENSION_NOTE",
-                "TIME_CALL_RM",
-                "VERIFICATION_FLAG",
-                "DISPUTE_CLOSED_RESPOND",
-                "DISPUTE_CLOSED_CONTENT_VI",
-                "DISPUTE_CLOSED_CONTENT_EN",
-                "PRIORITY_CACHE_TIME",
-                "IS_ON_LOYALTY",
-                "GO_VN_CAMPAIGN_DATE",
-                "LOGIN_BACKGROUND_IB",
-                "BUY_CD_MIN_AMOUNT",
-                "CD_PRODUCT_DES",
-            ],
-            "mid": 501,
-        },
-        public_key_base64,
-        DEFAULTS["server_public_key_base64"],
-    )
-    async with aiohttp.ClientSession() as session:
-        async with session.post(
-            f"{BASE_URL}utility-service/v1/get-config-value",
-            headers=DEFAULTS["headers"],
-            json=payload,
-        ) as response:
-            if response.status < 400:
-                jsonData = decrypt_response(await response.json(), private_key_pem)
-                if jsonData:
-                    jsonData = json.loads(jsonData)
-                    return jsonData
+    try:
+        if not public_key_base64 or not private_key_pem:
+            public_key_base64 = DEFAULTS["public_key_base64"]
+            private_key_pem = DEFAULTS["private_key_pem"]
+        if not default_meta:
+            default_meta = DEFAULT_PAYLOAD
+        payload = encrypt_request(
+            {
+                **default_meta,
+                "configCodes": [
+                    "EXPIRE_PASS",
+                    "EXPIRE_PASS_MES_IB_VN",
+                    "EXPIRE_PASS_MES_IB_EN",
+                    "CLOSE_CONFIRMATION_ND13_BY_DATE",
+                    "CLOSE_CONFIRMATION_ND13_BY_WEEK",
+                    "ON_RM",
+                    "STATUS_CARD_INSIGHT_BL",
+                    "PROD_CARD_INSIGHT",
+                    "ACCEPT_HDGDAT",
+                    "XPRO_PENSION_POPUP",
+                    "XPRO_NO_PENSION_NOTE",
+                    "TIME_CALL_RM",
+                    "VERIFICATION_FLAG",
+                    "DISPUTE_CLOSED_RESPOND",
+                    "DISPUTE_CLOSED_CONTENT_VI",
+                    "DISPUTE_CLOSED_CONTENT_EN",
+                    "PRIORITY_CACHE_TIME",
+                    "IS_ON_LOYALTY",
+                    "GO_VN_CAMPAIGN_DATE",
+                    "LOGIN_BACKGROUND_IB",
+                    "BUY_CD_MIN_AMOUNT",
+                    "CD_PRODUCT_DES",
+                ],
+                "mid": 501,
+            },
+            public_key_base64,
+            DEFAULTS["server_public_key_base64"],
+        )
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{BASE_URL}utility-service/v1/get-config-value",
+                headers=DEFAULTS["headers"],
+                json=payload,
+            ) as response:
+                if response.status < 400:
+                    jsonData = decrypt_response(await response.json(), private_key_pem)
+                    if jsonData:
+                        jsonData = json.loads(jsonData)
+                        return jsonData
 
+            return None
+    except Exception as e:
         return None
 
 
 async def getInsightToken(
     default_meta=None, public_key_base64=None, private_key_pem=None
 ):
-    if not public_key_base64 or not private_key_pem:
-        public_key_base64 = DEFAULTS["public_key_base64"]
-        private_key_pem = DEFAULTS["private_key_pem"]
-    if not default_meta:
-        default_meta = DEFAULT_PAYLOAD
-    payload = encrypt_request(
-        {**default_meta, "mid": 99999, "loading": True},
-        public_key_base64,
-        DEFAULTS["server_public_key_base64"],
-    )
-    async with aiohttp.ClientSession() as session:
-        async with session.post(
-            f"{BASE_URL}finance-service/v1/get-insight-token",
-            headers=DEFAULTS["headers"],
-            json=payload,
-        ) as response:
-            if response.status < 400:
-                jsonData = decrypt_response(await response.json(), private_key_pem)
-                if jsonData:
-                    jsonData = json.loads(jsonData)
-                    return jsonData
+    try:
+        if not public_key_base64 or not private_key_pem:
+            public_key_base64 = DEFAULTS["public_key_base64"]
+            private_key_pem = DEFAULTS["private_key_pem"]
+        if not default_meta:
+            default_meta = DEFAULT_PAYLOAD
+        payload = encrypt_request(
+            {**default_meta, "mid": 99999, "loading": True},
+            public_key_base64,
+            DEFAULTS["server_public_key_base64"],
+        )
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{BASE_URL}finance-service/v1/get-insight-token",
+                headers=DEFAULTS["headers"],
+                json=payload,
+            ) as response:
+                if response.status < 400:
+                    jsonData = await response.json()
+                    jsonData = decrypt_response(await response.json(), private_key_pem)
+                    if jsonData:
+                        jsonData = json.loads(jsonData)
+                        return jsonData
 
+            return None
+    except Exception as e:
         return None
 
 
