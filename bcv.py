@@ -12,8 +12,11 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.hazmat.primitives.asymmetric.ec import generate_private_key
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from dotenv import load_dotenv
 
-BASE_URL = "https://digiapp.vietcombank.com.vn/bank-service"
+load_dotenv()
+
+BASE_URL = os.getenv("base_url_api")
 DEFAULT_PAYLOAD = {
     "DT": "Windows",
     "E": None,
@@ -209,7 +212,9 @@ class CaptchaManager:
         self.captcha_guid = str(uuid.uuid4())
 
         # 3. Xây dựng URL tải hình CAPTCHA
-        self.captcha_image_url = f"https://digiapp.vietcombank.com.vn/utility-service/v2/captcha/MASS/{self.captcha_guid}"
+        self.captcha_image_url = (
+            f"{BASE_URL}utility-service/v2/captcha/MASS/{self.captcha_guid}"
+        )
         # URL ảnh cần OCR (thay bằng link của bạn)
         # url = self.captcha_image_url  # ← thay link thật vào đây
 
@@ -300,7 +305,7 @@ async def login(
         )
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                "https://digiapp.vietcombank.com.vn/authen-service/v1/login",
+                f"{BASE_URL}authen-service/v1/login",
                 headers=headers,
                 json=payload,
             ) as response:
@@ -471,9 +476,10 @@ async def getTextFromImage2(url):
                 if response.status < 400:
                     jsonData = await response.json()
                     if jsonData and "data" in jsonData:
-                        return re.search(
-                            r".*\>(.*?)\<.*", jsonData["data"]["text"]
-                        ).group(1)
+                        found = re.search(r".*\>(.*?)\<.*", jsonData["data"]["text"])
+                        if found:
+                            return found.group(1).strip()
+                        return None
                 return None
             except Exception as e:
                 print(f"Error: {e}")
@@ -495,7 +501,90 @@ async def getAccountList(
     )
     async with aiohttp.ClientSession() as session:
         async with session.post(
-            f"{BASE_URL}/v2/get-list-account-via-cif",
+            f"{BASE_URL}bank-service/v2/get-list-account-via-cif",
+            headers=DEFAULTS["headers"],
+            json=payload,
+        ) as response:
+            if response.status < 400:
+                jsonData = decrypt_response(await response.json(), private_key_pem)
+                if jsonData:
+                    jsonData = json.loads(jsonData)
+                    return jsonData["cards"]
+
+        return None
+
+
+async def getConfigValue(
+    default_meta=None, public_key_base64=None, private_key_pem=None
+):
+    if not public_key_base64 or not private_key_pem:
+        public_key_base64 = DEFAULTS["public_key_base64"]
+        private_key_pem = DEFAULTS["private_key_pem"]
+    if not default_meta:
+        default_meta = DEFAULT_PAYLOAD
+    payload = encrypt_request(
+        {
+            **default_meta,
+            "configCodes": [
+                "EXPIRE_PASS",
+                "EXPIRE_PASS_MES_IB_VN",
+                "EXPIRE_PASS_MES_IB_EN",
+                "CLOSE_CONFIRMATION_ND13_BY_DATE",
+                "CLOSE_CONFIRMATION_ND13_BY_WEEK",
+                "ON_RM",
+                "STATUS_CARD_INSIGHT_BL",
+                "PROD_CARD_INSIGHT",
+                "ACCEPT_HDGDAT",
+                "XPRO_PENSION_POPUP",
+                "XPRO_NO_PENSION_NOTE",
+                "TIME_CALL_RM",
+                "VERIFICATION_FLAG",
+                "DISPUTE_CLOSED_RESPOND",
+                "DISPUTE_CLOSED_CONTENT_VI",
+                "DISPUTE_CLOSED_CONTENT_EN",
+                "PRIORITY_CACHE_TIME",
+                "IS_ON_LOYALTY",
+                "GO_VN_CAMPAIGN_DATE",
+                "LOGIN_BACKGROUND_IB",
+                "BUY_CD_MIN_AMOUNT",
+                "CD_PRODUCT_DES",
+            ],
+            "mid": 501,
+        },
+        public_key_base64,
+        DEFAULTS["server_public_key_base64"],
+    )
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            f"{BASE_URL}utility-service/v1/get-config-value",
+            headers=DEFAULTS["headers"],
+            json=payload,
+        ) as response:
+            if response.status < 400:
+                jsonData = decrypt_response(await response.json(), private_key_pem)
+                if jsonData:
+                    jsonData = json.loads(jsonData)
+                    return jsonData["cards"]
+
+        return None
+
+
+async def getInsightToken(
+    default_meta=None, public_key_base64=None, private_key_pem=None
+):
+    if not public_key_base64 or not private_key_pem:
+        public_key_base64 = DEFAULTS["public_key_base64"]
+        private_key_pem = DEFAULTS["private_key_pem"]
+    if not default_meta:
+        default_meta = DEFAULT_PAYLOAD
+    payload = encrypt_request(
+        {**default_meta, "mid": 99999, "loading": True},
+        public_key_base64,
+        DEFAULTS["server_public_key_base64"],
+    )
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            f"{BASE_URL}finance-service/v1/get-insight-token",
             headers=DEFAULTS["headers"],
             json=payload,
         ) as response:
@@ -538,7 +627,7 @@ async def transactionHistory(
     )
     async with aiohttp.ClientSession() as session:
         async with session.post(
-            f"{BASE_URL}/v1/transaction-history",
+            f"{BASE_URL}bank-service/v1/transaction-history",
             headers=DEFAULTS["headers"],
             json=payload,
         ) as response:

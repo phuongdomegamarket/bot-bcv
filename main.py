@@ -122,7 +122,8 @@ def myStyle(log_queue):
         global processed_thread, DEFAULT_PAYLOAD, st
         print("getTransVCB is running")
         log_queue.put(("info", "getTransVCB is running"))
-        if DEFAULT_PAYLOAD:
+        isLive = await bcv.getInsightToken(DEFAULT_PAYLOAD)
+        if DEFAULT_PAYLOAD and isLive:
             try:
                 channels = guild.channels
                 basic = None
@@ -231,6 +232,26 @@ def myStyle(log_queue):
                 print(error)
                 log_queue.put(("error", str(error)))
                 pass
+        else:
+            print("trying re-login")
+            stopped = False
+            while not stopped:
+                result = await bcv.login(username=USERNAME, password=PASSWORD)
+                if result:
+                    DEFAULT_PAYLOAD = {
+                        **DEFAULT_PAYLOAD,
+                        "sessionId": result["sessionId"],
+                        "browserId": result["browserId"],
+                        "mobileId": result["userInfo"]["mobileId"],
+                        "accountType": result["userInfo"]["defaultAccountType"],
+                        "user": USERNAME,
+                        "clientId": result["userInfo"]["clientId"],
+                        "cif": result["userInfo"]["cif"],
+                    }
+                    stopped = True
+                else:
+                    print("trying re-login")
+                await asyncio.sleep(5)
 
     client.run(os.environ.get("botToken"))
 
