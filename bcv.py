@@ -564,7 +564,7 @@ async def getConfigValue(
                 jsonData = decrypt_response(await response.json(), private_key_pem)
                 if jsonData:
                     jsonData = json.loads(jsonData)
-                    return jsonData["cards"]
+                    return jsonData
 
         return None
 
@@ -592,7 +592,7 @@ async def getInsightToken(
                 jsonData = decrypt_response(await response.json(), private_key_pem)
                 if jsonData:
                     jsonData = json.loads(jsonData)
-                    return jsonData["cards"]
+                    return jsonData
 
         return None
 
