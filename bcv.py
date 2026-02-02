@@ -277,6 +277,7 @@ async def login(
         GUID = result["guid"]
         captcha_url = result["url"]
         captcha_value = await getTextFromImage2(captcha_url)
+        print(captcha_value)
     if not public_key_base64 or not private_key_pem:
         public_key_base64 = DEFAULTS["public_key_base64"]
         private_key_pem = DEFAULTS["private_key_pem"]
@@ -450,7 +451,15 @@ async def getTextFromImage1(url):
 
 async def getTextFromImage2(url):
     async with aiohttp.ClientSession() as session:
-        async with session.get(url) as response:
+        async with session.get(
+            url,
+            headers={
+                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0",
+                "Accept-Language": "en-US,en;q=0.9",
+                "Accept-Encoding": "gzip, deflate, br, zstd",
+                "Content-Type": "application/json",
+            },
+        ) as response:
             try:
                 image_bytes = await response.read()
                 base64_str = base64.b64encode(image_bytes).decode("ascii")
