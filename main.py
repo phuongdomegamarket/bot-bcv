@@ -291,32 +291,32 @@ def initialize_heavy_stuff():
             "Heavy initialization running..."
         )  # bạn sẽ thấy log này chỉ 1 lần trong console/cloud log
 
-        def test():
-            with st1.status("Processing...", expanded=True) as status:
-                placeholder = st1.empty()
-                logs = []
-                while thread.is_alive() or not log_queue.empty():
-                    try:
-                        level, message = log_queue.get_nowait()
-                        logs.append((level, message))
+        # def test():
+        #     with st1.status("Processing...", expanded=True) as status:
+        #         placeholder = st1.empty()
+        #         logs = []
+        #         while thread.is_alive() or not log_queue.empty():
+        #             try:
+        #                 level, message = log_queue.get_nowait()
+        #                 logs.append((level, message))
 
-                        with placeholder.container():
-                            for lvl, msg in logs:
-                                if lvl == "info":
-                                    st1.write(msg)
-                                elif lvl == "success":
-                                    st1.success(msg)
-                                elif lvl == "error":
-                                    st1.error(msg)
+        #                 with placeholder.container():
+        #                     for lvl, msg in logs:
+        #                         if lvl == "info":
+        #                             st1.write(msg)
+        #                         elif lvl == "success":
+        #                             st1.success(msg)
+        #                         elif lvl == "error":
+        #                             st1.error(msg)
 
-                        time.sleep(0.2)
-                    except queue.Empty:
-                        time.sleep(0.3)
+        #                 time.sleep(0.2)
+        #             except queue.Empty:
+        #                 time.sleep(0.3)
 
-                status.update(label="Hoàn thành!", state="complete", expanded=False)
+        #         status.update(label="Hoàn thành!", state="complete", expanded=False)
 
-        t = threading.Thread(target=test, daemon=True)
-        t.start()
+        # t = threading.Thread(target=test, daemon=True)
+        # t.start()
         return {
             "model": "loaded_successfully",
             "timestamp": time.time(),
