@@ -253,7 +253,26 @@ def myStyle(log_queue):
                     print("trying re-login")
                 await asyncio.sleep(5)
 
-    client.run(os.environ.get("botToken"))
+    # client.run(os.environ.get("botToken"))
+    max_retries = 3
+    retry_delay = 30  # giây
+
+    for attempt in range(max_retries):
+        try:
+            client.run(os.environ.get("botToken"))
+            break
+        except discord.errors.HTTPException as e:
+            if e.status == 429:
+                print(
+                    f"Rate limited! Chờ {retry_delay}s... (lần {attempt + 1}/{max_retries})"
+                )
+                time.sleep(retry_delay)
+                retry_delay *= 2  # Exponential backoff
+            else:
+                raise
+        except Exception as e:
+            print(f"Lỗi khác: {e}")
+            break
 
 
 thread = None
