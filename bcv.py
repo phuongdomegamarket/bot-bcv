@@ -4,6 +4,7 @@ import os
 import re
 import time
 import uuid
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 
 import aiohttp
@@ -25,6 +26,25 @@ DEFAULT_PAYLOAD = {
     "appVersion": "",
     "lang": "en",
 }
+
+# 1 session dùng chung (keep-alive): bỏ bắt tay TCP+TLS mới cho từng request,
+# giảm mỗi call từ ~300-600ms xuống ~100ms và tránh request bị treo quá lâu
+_http_session = None
+
+
+async def get_shared_session():
+    global _http_session
+    if _http_session is None or _http_session.closed:
+        _http_session = aiohttp.ClientSession(
+            connector=aiohttp.TCPConnector(limit=20, ttl_dns_cache=300),
+            timeout=aiohttp.ClientTimeout(total=15),
+        )
+    return _http_session
+
+
+@asynccontextmanager
+async def shared_session():
+    yield await get_shared_session()
 
 
 def generate_key():
@@ -304,7 +324,7 @@ async def login(
             public_key_base64,
             DEFAULTS["server_public_key_base64"],
         )
-        async with aiohttp.ClientSession() as session:
+        async with shared_session() as session:
             async with session.post(
                 f"{BASE_URL}authen-service/v1/login",
                 headers=headers,
@@ -450,7 +470,7 @@ async def getTextFromImage1(url):
 
 
 async def getTextFromImage2(url):
-    async with aiohttp.ClientSession() as session:
+    async with shared_session() as session:
         async with session.get(
             url,
             headers={
@@ -508,7 +528,7 @@ async def getAccountList(
         public_key_base64,
         DEFAULTS["server_public_key_base64"],
     )
-    async with aiohttp.ClientSession() as session:
+    async with shared_session() as session:
         async with session.post(
             f"{BASE_URL}bank-service/v2/get-list-account-via-cif",
             headers=DEFAULTS["headers"],
@@ -595,15 +615,17 @@ async def getInsightToken(
             public_key_base64,
             DEFAULTS["server_public_key_base64"],
         )
-        async with aiohttp.ClientSession() as session:
+        async with shared_session() as session:
             async with session.post(
                 f"{BASE_URL}finance-service/v1/get-insight-token",
                 headers=DEFAULTS["headers"],
                 json=payload,
             ) as response:
                 if response.status < 400:
-                    jsonData = await response.json()
-                    jsonData = decrypt_response(await response.json(), private_key_pem)
+                    # BUG cũ: await response.json() 2 lần -> luôn raise -> luôn
+                    # trả None -> isLive luôn None -> loop re-login vô hạn
+                    data = await response.json()
+                    jsonData = decrypt_response(data, private_key_pem)
                     if jsonData:
                         jsonData = json.loads(jsonData)
                         return jsonData
@@ -616,8 +638,8 @@ async def getInsightToken(
 async def transactionHistory(
     account_no,
     default_meta=None,
-    from_date=(datetime.now() - timedelta(days=7)).strftime("%d/%m/%Y"),
-    to_date=datetime.now().strftime("%d/%m/%Y"),
+    from_date=None,
+    to_date=None,
     length_in_page=10,
     page_index=0,
     public_key_base64=None,
@@ -628,6 +650,12 @@ async def transactionHistory(
     if not public_key_base64 or not private_key_pem:
         public_key_base64 = DEFAULTS["public_key_base64"]
         private_key_pem = DEFAULTS["private_key_pem"]
+    if not from_date:
+        # Tính mỗi lần gọi — default arg cũ bị đóng băng lúc import, app chạy
+        # qua nửa đêm sẽ có to_date cũ hơn ngày hiện tại -> bỏ sót GD mới
+        from_date = (datetime.now() - timedelta(days=7)).strftime("%d/%m/%Y")
+    if not to_date:
+        to_date = datetime.now().strftime("%d/%m/%Y")
     payload = encrypt_request(
         {
             **default_meta,
@@ -641,7 +669,7 @@ async def transactionHistory(
         public_key_base64,
         DEFAULTS["server_public_key_base64"],
     )
-    async with aiohttp.ClientSession() as session:
+    async with shared_session() as session:
         async with session.post(
             f"{BASE_URL}bank-service/v1/transaction-history",
             headers=DEFAULTS["headers"],
